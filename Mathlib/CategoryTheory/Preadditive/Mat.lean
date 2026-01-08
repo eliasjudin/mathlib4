@@ -359,6 +359,69 @@ lemma additiveObjIsoBiproduct_hom_π (F : Mat_ C ⥤ D) [Functor.Additive F] (M 
   erw [biproduct.lift_π, ← F.map_comp]
   simp
 
+variable {C : Type u₁} [Category.{v₁} C] [Preadditive C]
+variable {D : Type u₁} [Category.{v₁} D] [Preadditive D]
+
+/-
+A natural transformation between additive functors `Mat_ C ⥤ D` is determined by its
+components on the objects coming from `embedding C`.
+
+This is the categorical analogue of “a matrix morphism is determined by its entries”:
+we compare components after transporting along the canonical biproduct decomposition
+`additiveObjIsoBiproduct`.
+-/
+@[ext]
+theorem natTrans_ext
+    {F G : Mat_ C ⥤ D} [Functor.Additive F] [Functor.Additive G]
+    (η θ : F ⟶ G)
+    (h : ∀ X : C, η.app ((embedding C).obj X) = θ.app ((embedding C).obj X)) :
+    η = θ := by
+  ext M
+  -- Postcompose with the canonical isomorphism exhibiting `G.obj M` as a biproduct of the
+  -- values on the embedded components; equality into a biproduct is checked on projections.
+  have hcomp :
+      η.app M ≫ (additiveObjIsoBiproduct G M).hom =
+        θ.app M ≫ (additiveObjIsoBiproduct G M).hom := by
+    ext i
+    -- The `i`-th projection map `M ⟶ embedding (M.X i)` in `Mat_ C`.
+    let p : M ⟶ (embedding C).obj (M.X i) :=
+      M.isoBiproductEmbedding.hom ≫
+        Limits.biproduct.π (fun j : M.ι => (embedding C).obj (M.X j)) i
+    have hp : η.app M ≫ G.map p = θ.app M ≫ G.map p := by
+      calc
+        η.app M ≫ G.map p =
+            F.map p ≫ η.app ((embedding C).obj (M.X i)) := (η.naturality p).symm
+        _ = F.map p ≫ θ.app ((embedding C).obj (M.X i)) := by
+              simp [h (M.X i)]
+        _ = θ.app M ≫ G.map p := θ.naturality p
+    -- Rewrite the projection out of `additiveObjIsoBiproduct` using the simp lemma
+    -- `additiveObjIsoBiproduct_hom_π`.
+    simpa [p, Category.assoc] using hp
+  -- Cancel the postcomposition with the isomorphism `additiveObjIsoBiproduct G M`.
+  calc
+    η.app M
+        = η.app M ≫ (additiveObjIsoBiproduct G M).hom ≫ (additiveObjIsoBiproduct G M).inv := by
+            simp
+    _   = θ.app M ≫ (additiveObjIsoBiproduct G M).hom ≫ (additiveObjIsoBiproduct G M).inv := by
+            simpa using
+              congrArg (fun f => f ≫ (additiveObjIsoBiproduct G M).inv) hcomp
+    _   = θ.app M := by
+            simp
+
+/--
+A natural isomorphism between additive functors `Mat_ C ⥤ D` is determined by its
+components on the objects coming from `embedding C`.
+-/
+@[ext]
+theorem natIso_ext
+    {F G : Mat_ C ⥤ D} [Functor.Additive F] [Functor.Additive G]
+    (η θ : F ≅ G)
+    (h : ∀ X : C, η.hom.app ((embedding C).obj X) = θ.hom.app ((embedding C).obj X)) :
+    η = θ := by
+  have hhom : η.hom = θ.hom :=
+    natTrans_ext (η := η.hom) (θ := θ.hom) h
+  exact Iso.ext hhom
+
 @[reassoc (attr := simp)]
 lemma ι_additiveObjIsoBiproduct_inv (F : Mat_ C ⥤ D) [Functor.Additive F] (M : Mat_ C) (i : M.ι) :
     biproduct.ι _ i ≫ (additiveObjIsoBiproduct F M).inv =
@@ -441,7 +504,37 @@ def liftUnique (F : C ⥤ D) [Functor.Additive F] (L : Mat_ C ⥤ D) [Functor.Ad
       dsimp
       simpa using α.hom.naturality (f j k)
 
--- TODO is there some uniqueness statement for the natural isomorphism in `liftUnique`?
+variable {C : Type u₁} [Category.{v₁} C] [Preadditive C]
+variable {D : Type u₁} [Category.{v₁} D] [Preadditive D] [HasFiniteBiproducts D]
+variable (F : C ⥤ D) [Functor.Additive F]
+variable (L : Mat_ C ⥤ D) [Functor.Additive L]
+
+/--
+Uniqueness for the comparison `L ≅ lift F`: if two natural isomorphisms induce the same
+comparison on embedded objects (after composing with `embeddingLiftIso`), they are equal.
+-/
+theorem liftIso_ext_comp_embeddingLiftIso
+    {β γ : L ≅ lift F}
+    (h :
+      ∀ X : C,
+        β.hom.app ((embedding C).obj X) ≫ (embeddingLiftIso F).hom.app X =
+          γ.hom.app ((embedding C).obj X) ≫ (embeddingLiftIso F).hom.app X) :
+    β = γ := by
+  apply Mat_.natIso_ext (η := β) (θ := γ)
+  intro X
+  -- Cancel the comparison isomorphism on the right by postcomposing with the inverse.
+  have hx := congrArg (fun f => f ≫ (embeddingLiftIso F).inv.app X) (h X)
+  -- The component of `embeddingLiftIso` is built from the biproduct with a single summand.
+  -- Make that cancellation explicit.
+  have hcancel :
+      (biproduct.desc (fun _ : PUnit => 𝟙 (F.obj X))) ≫
+          biproduct.lift (fun _ : PUnit => 𝟙 (F.obj X)) =
+        (𝟙 (⨁ fun _ : PUnit => F.obj X)) := by
+    ext ⟨⟩
+    simp
+  dsimp [embeddingLiftIso] at hx
+  simpa [Category.assoc, hcancel] using hx
+
 /-- Two additive functors `Mat_ C ⥤ D` are naturally isomorphic if
 their precompositions with `embedding C` are naturally isomorphic as functors `C ⥤ D`. -/
 def ext {F G : Mat_ C ⥤ D} [Functor.Additive F] [Functor.Additive G]
