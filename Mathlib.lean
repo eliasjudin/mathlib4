@@ -2505,6 +2505,8 @@ public import Mathlib.CategoryTheory.FiberedCategory.Fibered
 public import Mathlib.CategoryTheory.FiberedCategory.Grothendieck
 public import Mathlib.CategoryTheory.FiberedCategory.HasFibers
 public import Mathlib.CategoryTheory.FiberedCategory.HomLift
+public import Mathlib.CategoryTheory.FiberedCategory.PseudofunctorOfFibers
+public import Mathlib.CategoryTheory.FiberedCategory.Reindexing
 public import Mathlib.CategoryTheory.Filtered.Basic
 public import Mathlib.CategoryTheory.Filtered.Connected
 public import Mathlib.CategoryTheory.Filtered.CostructuredArrow
@@ -2600,6 +2602,7 @@ public import Mathlib.CategoryTheory.Idempotents.Karoubi
 public import Mathlib.CategoryTheory.Idempotents.KaroubiKaroubi
 public import Mathlib.CategoryTheory.Idempotents.SimplicialObject
 public import Mathlib.CategoryTheory.InducedCategory
+public import Mathlib.CategoryTheory.InternalCategory.Basic
 public import Mathlib.CategoryTheory.IsConnected
 public import Mathlib.CategoryTheory.Iso
 public import Mathlib.CategoryTheory.IsomorphismClasses
@@ -3125,6 +3128,7 @@ public import Mathlib.CategoryTheory.Sites.Descent.DescentDataAsCoalgebra
 public import Mathlib.CategoryTheory.Sites.Descent.IsPrestack
 public import Mathlib.CategoryTheory.Sites.Descent.IsStack
 public import Mathlib.CategoryTheory.Sites.Descent.Precoverage
+public import Mathlib.CategoryTheory.Sites.Descent.SingleMorphism
 public import Mathlib.CategoryTheory.Sites.EffectiveEpimorphic
 public import Mathlib.CategoryTheory.Sites.EpiMono
 public import Mathlib.CategoryTheory.Sites.EqualizerSheafCondition
