@@ -41,7 +41,7 @@ variable {𝒜 : Type w} [Category.{v} 𝒜]
 noncomputable section
 
 /-- Fiber category object part for the pseudofunctor of fibers. -/
-abbrev fibers_obj (pA : 𝒜 ⥤ C) [pA.IsFibered] (X : LocallyDiscrete Cᵒᵖ) : Cat.{v, w} :=
+abbrev fibers_obj (pA : 𝒜 ⥤ C) (X : LocallyDiscrete Cᵒᵖ) : Cat.{v, w} :=
   Cat.of (Fiber pA (unop X.as))
 
 /-- Reindexing functor as the morphism part for the pseudofunctor of fibers. -/
