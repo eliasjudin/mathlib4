@@ -603,7 +603,7 @@ theorem hasseDeriv_single_one (i : σ) :
     simp [pderiv_monomial, mvChoose_single, Nat.choose_one_right, mul_comm]
   · simp [hp, hq]
 
-/-- Hasse derivatives commute with renaming variables along an equivalence. -/
+/-- Renaming variables along an equivalence commutes with Hasse differentiation. -/
 theorem hasseDeriv_rename (e : σ ≃ τ) (i : σ →₀ ℕ) (P : MvPolynomial σ R) :
     hasseDeriv (i.mapDomain e) (MvPolynomial.rename e P) =
       MvPolynomial.rename e (hasseDeriv i P) := by
@@ -719,7 +719,9 @@ private lemma cons_add_mapDomain_succ {n : ℕ} (m i : Fin n →₀ ℕ) (k : �
   · intro j
     simp [Finsupp.mapDomain_apply, Fin.succ_injective]
 
-/-- `finSuccEquiv` commutes with Hasse derivatives in the last `n` variables. -/
+/-- In the `finSuccEquiv` description of a polynomial in `Fin (n + 1)` variables, Hasse
+differentiation in the trailing `n` variables commutes with taking coefficients in the leading
+variable. -/
 theorem coeff_finSuccEquiv_hasseDeriv_mapDomain {n : ℕ}
     (P : MvPolynomial (Fin (n + 1)) R) (i : Fin n →₀ ℕ) (k : ℕ) :
     (MvPolynomial.finSuccEquiv R n
@@ -741,7 +743,9 @@ theorem coeff_finSuccEquiv_hasseDeriv_mapDomain {n : ℕ}
   simp [MvPolynomial.finSuccEquiv_coeff_coeff, hasseDeriv_coeff, hmv_cons,
     cons_add_mapDomain_succ]
 
-/-- `finSuccEquiv` commutes with Hasse derivatives in the last `n` variables. -/
+/-- In the `finSuccEquiv` description of a polynomial in `Fin (n + 1)` variables, Hasse
+differentiation in the trailing `n` variables acts coefficientwise on the coefficients of the
+leading variable. -/
 theorem finSuccEquiv_hasseDeriv_mapDomain {n : ℕ}
     (P : MvPolynomial (Fin (n + 1)) R) (i : Fin n →₀ ℕ) :
     MvPolynomial.finSuccEquiv R n (hasseDeriv (Finsupp.mapDomain Fin.succ i) P) =
@@ -778,7 +782,8 @@ theorem finSuccEquiv_hasseDeriv_mapDomain {n : ℕ}
       simp [Polynomial.coeff_monomial, hb']
     simpa [hkcoeff] using hcoeff.symm
 
-/-- `finOneAlgEquiv` identifies one-variable Hasse derivatives with the univariate ones. -/
+/-- Under `finOneAlgEquiv`, one-variable Hasse derivatives agree with the univariate Hasse
+derivatives. -/
 theorem finOneAlgEquiv_hasseDeriv (P : MvPolynomial (Fin 1) R) (k : ℕ) :
     finOneAlgEquiv R (hasseDeriv (Finsupp.single 0 k) P) =
       Polynomial.hasseDeriv k (finOneAlgEquiv R P) := by

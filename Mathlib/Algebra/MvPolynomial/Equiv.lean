@@ -571,7 +571,8 @@ theorem finSuccEquiv_coeff_coeff (m : Fin n →₀ ℕ) (f : MvPolynomial (Fin (
 
 variable (R)
 
-/-- The algebra isomorphism between `MvPolynomial (Fin 1) R` and `Polynomial R`. -/
+/-- The algebra isomorphism identifying multivariate polynomials in one variable with
+univariate polynomials. -/
 def finOneAlgEquiv : MvPolynomial (Fin 1) R ≃ₐ[R] Polynomial R :=
   (finSuccEquiv R 0).trans (Polynomial.mapAlgEquiv (MvPolynomial.isEmptyAlgEquiv R (Fin 0)))
 
