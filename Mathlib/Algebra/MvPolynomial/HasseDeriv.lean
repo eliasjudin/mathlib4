@@ -13,9 +13,10 @@ public import Mathlib.Data.Finsupp.Weight
 /-!
 # Hasse derivatives of multivariate polynomials
 
-For a multi-index `i : σ →₀ ℕ`, the Hasse derivative `MvPolynomial.hasseDeriv i` is the
-`R`-linear map on `MvPolynomial σ R` sending `monomial k r` to
-`monomial (k - i) ((mvChoose k i : R) * r)`.
+This file defines Hasse derivatives for multivariate polynomials. For a multi-index
+`i : σ →₀ ℕ`, the map `MvPolynomial.hasseDeriv i` is the `R`-linear endomorphism of
+`MvPolynomial σ R` sending the monomial $r X^k$ to $\binom{k}{i} r X^{k-i}$, where
+$\binom{k}{i}$ is the multivariate binomial coefficient `MvPolynomial.mvChoose k i`.
 
 ## Main declarations
 
@@ -43,7 +44,7 @@ open scoped BigOperators
 
 variable {σ τ R : Type*} [CommSemiring R]
 
-/-- The multivariate binomial coefficient. -/
+/-- The multivariate binomial coefficient $\binom{k}{i}$. -/
 def mvChoose (k i : σ →₀ ℕ) : ℕ :=
   if i ≤ k then k.prod (fun j n ↦ n.choose (i j)) else 0
 
@@ -63,7 +64,7 @@ lemma mvChoose_self (k : σ →₀ ℕ) : mvChoose k k = 1 := by
   classical
   simp [mvChoose, Finsupp.prod]
 
-/-- `mvChoose k (single i j)` is the usual binomial coefficient. -/
+/-- For a single-coordinate multi-index, `mvChoose` is the usual binomial coefficient. -/
 lemma mvChoose_single (k : σ →₀ ℕ) (i : σ) (j : ℕ) :
     mvChoose k (Finsupp.single i j) = Nat.choose (k i) j := by
   classical
@@ -88,7 +89,7 @@ lemma mvChoose_single (k : σ →₀ ℕ) (i : σ) (j : ℕ) :
     simp [mvChoose_of_not_le (k := k) (i := Finsupp.single i j) h,
       Nat.choose_eq_zero_of_lt hji]
 
-/-- Symmetry of multivariate binomial coefficients. -/
+/-- The symmetry identity $\binom{i + j}{i} = \binom{i + j}{j}$. -/
 theorem mvChoose_symm_add (i j : σ →₀ ℕ) :
     mvChoose (i + j) i = mvChoose (i + j) j := by
   classical
@@ -102,7 +103,7 @@ lemma mvChoose_symm_add_cast (i j : σ →₀ ℕ) :
     (mvChoose (i + j) i : R) = (mvChoose (i + j) j : R) :=
   congrArg (fun n : ℕ => (n : R)) (mvChoose_symm_add (σ := σ) i j)
 
-/-- Product identity for multivariate binomial coefficients. -/
+/-- The identity $\binom{k}{i} \binom{k - i}{j} = \binom{k}{i + j} \binom{i + j}{i}$. -/
 theorem mvChoose_mul (k i j : σ →₀ ℕ) :
     mvChoose k i * mvChoose (k - i) j =
       mvChoose k (i + j) * mvChoose (i + j) i := by
@@ -171,7 +172,7 @@ theorem mvChoose_mul (k i j : σ →₀ ℕ) :
       hi ((Finsupp.le_def.2 fun x => Nat.le_add_right _ _).trans hij)
     simp [mvChoose, hi, hij]
 
-/-- Over a finite index type, `mvChoose` is a product of ordinary binomial coefficients. -/
+/-- Over a finite index type, $\binom{k}{i} = \prod_{j : \sigma} \binom{k_j}{i_j}$. -/
 lemma mvChoose_eq_prod_choose [Fintype σ] (k i : σ →₀ ℕ) :
     mvChoose k i = ∏ j : σ, (k j).choose (i j) := by
   classical
@@ -385,10 +386,11 @@ private theorem mvChoose_add (a b i : σ →₀ ℕ) [DecidableEq σ] :
           exact ⟨f, hf, hfp⟩)
         hψ_val
 
-/-- The Hasse derivative indexed by a multi-index. -/
+/-- The Hasse derivative $\partial^{[i]}$ of multivariate polynomials. -/
 def hasseDeriv (i : σ →₀ ℕ) : MvPolynomial σ R →ₗ[R] MvPolynomial σ R :=
   Finsupp.lsum R fun k ↦ (mvChoose k i : R) • MvPolynomial.monomial (k - i)
 
+/-- On a monomial $r X^k$, the Hasse derivative is $\binom{k}{i} r X^{k-i}$. -/
 @[simp]
 theorem hasseDeriv_monomial (i k : σ →₀ ℕ) (r : R) :
     hasseDeriv i (MvPolynomial.monomial k r) =
@@ -407,6 +409,8 @@ lemma hasseDeriv_monomial_eq_prod_choose [Fintype σ] (i k : σ →₀ ℕ) (r :
   classical
   simp [mvChoose_eq_prod_choose, hasseDeriv_monomial]
 
+/-- The coefficient of $X^m$ in `hasseDeriv i P` is $\binom{m + i}{i}$ times the
+coefficient of $X^{m+i}$ in `P`. -/
 theorem hasseDeriv_coeff (i : σ →₀ ℕ) (P : MvPolynomial σ R) (m : σ →₀ ℕ) :
     coeff m (hasseDeriv i P) = (mvChoose (m + i) i : R) * coeff (m + i) P := by
   classical
@@ -430,6 +434,7 @@ theorem hasseDeriv_coeff (i : σ →₀ ℕ) (P : MvPolynomial σ R) (m : σ →
       · simp [hasseDeriv_monomial, mvChoose_of_not_le (k := k) (i := i) hik, hcoeff]
   · simp [hp, hq, coeff_add, mul_add]
 
+/-- The Hasse derivative of order $0$ is the identity. -/
 @[simp]
 theorem hasseDeriv_zero :
     hasseDeriv (R := R) (0 : σ →₀ ℕ) =
@@ -440,7 +445,8 @@ theorem hasseDeriv_zero :
   · simp
   · simp [hp, hq]
 
-/-- Composition of multivariate Hasse derivatives. -/
+/-- The composition formula
+$\partial^{[i]} \circ \partial^{[j]} = \binom{i + j}{i} \partial^{[i+j]}$. -/
 theorem hasseDeriv_comp (i j : σ →₀ ℕ) :
     (hasseDeriv (R := R) i).comp (hasseDeriv j) =
       (mvChoose (i + j) i : R) • hasseDeriv (R := R) (i + j) := by
@@ -488,7 +494,8 @@ theorem hasseDeriv_comp (i j : σ →₀ ℕ) :
       simpa [LinearMap.comp_apply] using hq
     simp [hp', hq']
 
-/-- The multivariate Leibniz rule for Hasse derivatives. -/
+/-- The multivariate Leibniz rule
+$\partial^{[i]} (P Q) = \sum_{p + q = i} \partial^{[p]} P \, \partial^{[q]} Q$. -/
 theorem hasseDeriv_mul [DecidableEq σ] (i : σ →₀ ℕ) (P Q : MvPolynomial σ R) :
     hasseDeriv i (P * Q) =
       ∑ p ∈ Finset.antidiagonal i, hasseDeriv p.1 P * hasseDeriv p.2 Q := by
@@ -564,7 +571,8 @@ theorem hasseDeriv_mul [DecidableEq σ] (i : σ →₀ ℕ) (P Q : MvPolynomial 
     rw [← add_mul]
     simp
 
-/-- The first Hasse derivative in one variable is the corresponding partial derivative. -/
+/-- The Hasse derivative indexed by `Finsupp.single i 1` is the partial derivative
+`pderiv i`. -/
 theorem hasseDeriv_single_one (i : σ) :
     hasseDeriv (R := R) (Finsupp.single i 1) = pderiv (R := R) i := by
   classical
