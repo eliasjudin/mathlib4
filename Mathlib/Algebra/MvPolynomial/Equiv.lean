@@ -569,6 +569,55 @@ theorem finSuccEquiv_coeff_coeff (m : Fin n →₀ ℕ) (f : MvPolynomial (Fin (
       simpa only [monomial_eq, C_1, one_mul, Finsupp.prod_pow, tail_apply, if_neg hmj.symm] using
         coeff_monomial m j.tail (1 : R)
 
+variable (R)
+
+/-- The algebra isomorphism between `MvPolynomial (Fin 1) R` and `Polynomial R`. -/
+def finOneAlgEquiv : MvPolynomial (Fin 1) R ≃ₐ[R] Polynomial R :=
+  (finSuccEquiv R 0).trans (Polynomial.mapAlgEquiv (MvPolynomial.isEmptyAlgEquiv R (Fin 0)))
+
+@[simp]
+lemma finOneAlgEquiv_C (r : R) : finOneAlgEquiv R (MvPolynomial.C r) = Polynomial.C r := by
+  simp [finOneAlgEquiv, MvPolynomial.finSuccEquiv_apply]
+
+@[simp]
+lemma finOneAlgEquiv_X_zero : finOneAlgEquiv R (MvPolynomial.X (0 : Fin 1)) = Polynomial.X := by
+  simp [finOneAlgEquiv, MvPolynomial.finSuccEquiv_X_zero]
+
+@[simp]
+lemma coeff_finOneAlgEquiv (P : MvPolynomial (Fin 1) R) (n : ℕ) :
+    (finOneAlgEquiv R P).coeff n = coeff (Finsupp.single 0 n) P := by
+  classical
+  have hcoeff0 :
+      (↑(MvPolynomial.isEmptyAlgEquiv R (Fin 0)) :
+          MvPolynomial (Fin 0) R →+* R)
+          ((MvPolynomial.finSuccEquiv R 0 P).coeff n) =
+        ((MvPolynomial.finSuccEquiv R 0 P).coeff n).coeff 0 := by
+    simpa using
+      (MvPolynomial.isEmptyRingEquiv_eq_coeff_zero
+        (x := (MvPolynomial.finSuccEquiv R 0 P).coeff n))
+  have hcoeff :
+      ((MvPolynomial.finSuccEquiv R 0 P).coeff n).coeff 0 =
+        coeff (Finsupp.cons n (0 : Fin 0 →₀ ℕ)) P := by
+    simpa using
+      (MvPolynomial.finSuccEquiv_coeff_coeff (m := (0 : Fin 0 →₀ ℕ)) (f := P) (i := n))
+  have hcons : (Finsupp.cons n (0 : Fin 0 →₀ ℕ)) = Finsupp.single 0 n := by
+    apply Finsupp.ext
+    intro i
+    have hi : i = 0 := by simpa using (Fin.eq_zero i)
+    subst hi
+    simp [Finsupp.cons_zero]
+  calc
+    (finOneAlgEquiv R P).coeff n =
+        (↑(MvPolynomial.isEmptyAlgEquiv R (Fin 0)) :
+          MvPolynomial (Fin 0) R →+* R)
+          ((MvPolynomial.finSuccEquiv R 0 P).coeff n) := by
+      simp [finOneAlgEquiv, Polynomial.coe_mapAlgEquiv, Polynomial.coeff_map]
+    _ = ((MvPolynomial.finSuccEquiv R 0 P).coeff n).coeff 0 := hcoeff0
+    _ = coeff (Finsupp.cons n (0 : Fin 0 →₀ ℕ)) P := hcoeff
+    _ = coeff (Finsupp.single 0 n) P := by simp [hcons]
+
+variable {R}
+
 theorem eval_eq_eval_mv_eval' (s : Fin n → R) (y : R) (f : MvPolynomial (Fin (n + 1)) R) :
     eval (Fin.cons y s : Fin (n + 1) → R) f =
       Polynomial.eval y (Polynomial.map (eval s) (finSuccEquiv R n f)) := by

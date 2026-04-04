@@ -5,7 +5,9 @@ Authors: Elias Judin
 -/
 module
 
+public import Mathlib.Algebra.MvPolynomial.Equiv
 public import Mathlib.Algebra.MvPolynomial.PDeriv
+public import Mathlib.Algebra.MvPolynomial.Rename
 public import Mathlib.Algebra.Polynomial.HasseDeriv
 public import Mathlib.Data.Finsupp.Antidiagonal
 public import Mathlib.Data.Finsupp.Weight
@@ -199,6 +201,25 @@ lemma mvChoose_eq_prod_choose [Fintype σ] (k i : σ →₀ ℕ) :
     have hprod : (∏ y : σ, Nat.choose (k y) (i y)) = 0 := by
       simpa using (Finset.prod_eq_zero (i := x) (by simp) hx0)
     simp [hprod]
+
+private lemma mvChoose_mapDomain_equiv (e : σ ≃ τ) (k i : σ →₀ ℕ) :
+    mvChoose (k.mapDomain e) (i.mapDomain e) = mvChoose k i := by
+  by_cases h : i ≤ k
+  · have hmap : i.mapDomain e ≤ k.mapDomain e := by
+      rw [Finsupp.le_def] at h ⊢
+      intro a
+      simpa [Finsupp.mapDomain_equiv_apply] using h (e.symm a)
+    rw [mvChoose_of_le hmap, mvChoose_of_le h]
+    simpa [Finsupp.mapDomain_equiv_apply] using
+      (Finsupp.prod_mapDomain_index_inj
+        (f := e) (s := k) (h := fun a n ↦ n.choose ((i.mapDomain e) a)) e.injective)
+  · have hmap : ¬ i.mapDomain e ≤ k.mapDomain e := by
+      intro hmap
+      apply h
+      rw [Finsupp.le_def] at hmap ⊢
+      intro a
+      simpa [Finsupp.mapDomain_equiv_apply] using hmap (e a)
+    simp [mvChoose, h, hmap]
 
 private lemma mvChoose_eq_prod_choose_of_support_subset
     (k i : σ →₀ ℕ) (s : Finset σ) (hi : i.support ⊆ s) :
@@ -581,5 +602,196 @@ theorem hasseDeriv_single_one (i : σ) :
   · rw [hasseDeriv_monomial]
     simp [pderiv_monomial, mvChoose_single, Nat.choose_one_right, mul_comm]
   · simp [hp, hq]
+
+/-- Hasse derivatives commute with renaming variables along an equivalence. -/
+theorem hasseDeriv_rename (e : σ ≃ τ) (i : σ →₀ ℕ) (P : MvPolynomial σ R) :
+    hasseDeriv (i.mapDomain e) (MvPolynomial.rename e P) =
+      MvPolynomial.rename e (hasseDeriv i P) := by
+  classical
+  refine MvPolynomial.induction_on' P (fun k r => ?_) (fun p q hp hq => ?_)
+  · have htsub :
+        k.mapDomain e - i.mapDomain e = (k - i).mapDomain e := by
+      ext a
+      simp [Finsupp.mapDomain_equiv_apply, Finsupp.tsub_apply]
+    simp [MvPolynomial.rename_monomial, hasseDeriv_monomial, htsub,
+      mvChoose_mapDomain_equiv]
+  · simp [hp, hq]
+
+private lemma mvChoose_mapDomain_succ {n : ℕ} (J : Fin (n + 1) →₀ ℕ) (i : Fin n →₀ ℕ) :
+    mvChoose J (Finsupp.mapDomain Fin.succ i) =
+      mvChoose (Finsupp.comapDomain Fin.succ J
+        (Set.injOn_of_injective (Fin.succ_injective n))) i := by
+  set i' : Fin (n + 1) →₀ ℕ := Finsupp.mapDomain Fin.succ i
+  set J' : Fin n →₀ ℕ :=
+    Finsupp.comapDomain Fin.succ J (Set.injOn_of_injective (Fin.succ_injective n))
+  have hi0 : i' 0 = 0 := by
+    refine Finsupp.mapDomain_notin_range (x := i) (a := 0) (fun h ↦ ?_)
+    rcases h with ⟨j, hj⟩
+    exact (Fin.succ_ne_zero j) hj
+  have hle_iff : i' ≤ J ↔ i ≤ J' := by
+    refine ⟨fun h j ↦ ?_, fun h ↦ ?_⟩
+    · have h' := (Finsupp.le_def.mp h) (Fin.succ j)
+      simpa [i', J', Finsupp.comapDomain_apply, Finsupp.mapDomain_apply,
+        Fin.succ_injective] using h'
+    · refine (Finsupp.le_def).2 (fun x ↦ ?_)
+      refine Fin.cases ?_ ?_ x
+      · simp [hi0]
+      · intro j
+        have h' := (Finsupp.le_def.mp h) j
+        simpa [i', J', Finsupp.comapDomain_apply, Finsupp.mapDomain_apply,
+          Fin.succ_injective] using h'
+  by_cases hle : i' ≤ J
+  · have hle' : i ≤ J' := hle_iff.mp hle
+    have hprod_left :
+        J.prod (fun x n ↦ n.choose (i' x)) =
+          (J.support.erase 0).prod (fun x ↦ (J x).choose (i' x)) := by
+      by_cases h0mem : (0 : Fin (n + 1)) ∈ J.support
+      · have h0 : (J 0).choose (i' 0) = 1 := by simp [hi0]
+        calc
+          J.prod (fun x n ↦ n.choose (i' x)) =
+              J.support.prod (fun x ↦ (J x).choose (i' x)) := by
+                simp [Finsupp.prod]
+          _ = (insert 0 (J.support.erase 0)).prod (fun x ↦ (J x).choose (i' x)) := by
+                simp [Finset.insert_erase h0mem]
+          _ =
+              (J 0).choose (i' 0) *
+                (J.support.erase 0).prod (fun x ↦ (J x).choose (i' x)) := by
+                simp [Finset.prod_insert]
+          _ = (J.support.erase 0).prod (fun x ↦ (J x).choose (i' x)) := by
+                simp [h0]
+      · simp [Finsupp.prod, Finset.erase_eq_of_notMem h0mem]
+    have himage :
+        Finset.image Fin.succ J'.support = J.support.erase 0 := by
+      ext x
+      refine ⟨fun hx ↦ ?_, fun hx ↦ ?_⟩
+      · rcases Finset.mem_image.1 hx with ⟨y, hy, rfl⟩
+        have hy' : Fin.succ y ∈ J.support := by
+          simpa [J'] using hy
+        exact Finset.mem_erase.2 ⟨Fin.succ_ne_zero y, hy'⟩
+      · rcases Finset.mem_erase.1 hx with ⟨hxne, hxmem⟩
+        cases x using Fin.cases with
+        | zero => exact (hxne rfl).elim
+        | succ y =>
+            have hy : y ∈ J'.support := by
+              simpa [J'] using (by simpa using hxmem : Fin.succ y ∈ J.support)
+            exact Finset.mem_image.2 ⟨y, hy, rfl⟩
+    have hprod_image :
+        J'.support.prod (fun x ↦ (J (Fin.succ x)).choose (i x)) =
+          (Finset.image Fin.succ J'.support).prod (fun x ↦ (J x).choose (i' x)) := by
+      have hinj : Set.InjOn (fun x => Fin.succ x) (J'.support : Set (Fin n)) := by
+        intro x hx y hy hxy
+        exact Fin.succ_injective _ hxy
+      have h :=
+        (Finset.prod_image (s := J'.support) (g := fun x => Fin.succ x)
+          (f := fun x => (J x).choose (i' x)) hinj)
+      convert h.symm using 1
+      simp [i', Finsupp.mapDomain_apply, Fin.succ_injective]
+    have hprod_right :
+        J'.prod (fun x n ↦ n.choose (i x)) =
+          (J.support.erase 0).prod (fun x ↦ (J x).choose (i' x)) := by
+      calc
+        J'.prod (fun x n ↦ n.choose (i x)) =
+            J'.support.prod (fun x ↦ (J' x).choose (i x)) := by
+              simp [Finsupp.prod]
+        _ = J'.support.prod (fun x ↦ (J (Fin.succ x)).choose (i x)) := by
+              simp [J', Finsupp.comapDomain_apply]
+        _ = (Finset.image Fin.succ J'.support).prod (fun x ↦ (J x).choose (i' x)) := by
+              simpa using hprod_image
+        _ = (J.support.erase 0).prod (fun x ↦ (J x).choose (i' x)) := by
+              simp [himage]
+    have hprod :
+        J.prod (fun x n ↦ n.choose (i' x)) =
+          J'.prod (fun x n ↦ n.choose (i x)) := by
+      simpa [hprod_right] using hprod_left
+    simp [mvChoose_of_le (k := J) (i := i') hle, mvChoose_of_le (k := J') (i := i) hle', hprod]
+  · have hle' : ¬ i ≤ J' := fun hle' => hle (hle_iff.mpr hle')
+    simp [mvChoose, hle, hle']
+
+private lemma cons_add_mapDomain_succ {n : ℕ} (m i : Fin n →₀ ℕ) (k : ℕ) :
+    m.cons k + Finsupp.mapDomain Fin.succ i = (m + i).cons k := by
+  ext x
+  refine Fin.cases ?_ ?_ x
+  · have h0 : (Finsupp.mapDomain Fin.succ i) 0 = 0 := by
+      refine Finsupp.mapDomain_notin_range (x := i) (a := 0) (fun h ↦ ?_)
+      rcases h with ⟨j, hj⟩
+      exact (Fin.succ_ne_zero j) hj
+    simp [h0]
+  · intro j
+    simp [Finsupp.mapDomain_apply, Fin.succ_injective]
+
+/-- `finSuccEquiv` commutes with Hasse derivatives in the last `n` variables. -/
+theorem coeff_finSuccEquiv_hasseDeriv_mapDomain {n : ℕ}
+    (P : MvPolynomial (Fin (n + 1)) R) (i : Fin n →₀ ℕ) (k : ℕ) :
+    (MvPolynomial.finSuccEquiv R n
+          (hasseDeriv (Finsupp.mapDomain Fin.succ i) P)).coeff k =
+      hasseDeriv i ((MvPolynomial.finSuccEquiv R n P).coeff k) := by
+  classical
+  have hmv_cons (m : Fin n →₀ ℕ) :
+      mvChoose ((m + i).cons k) (Finsupp.mapDomain Fin.succ i) =
+        mvChoose (m + i) i := by
+    have hcomap :
+        Finsupp.comapDomain Fin.succ ((m + i).cons k)
+            (Set.injOn_of_injective (Fin.succ_injective n)) =
+          m + i := by
+      ext j
+      simp [Finsupp.comapDomain_apply]
+    simpa [hcomap] using
+      (mvChoose_mapDomain_succ (J := (m + i).cons k) (i := i))
+  ext m
+  simp [MvPolynomial.finSuccEquiv_coeff_coeff, hasseDeriv_coeff, hmv_cons,
+    cons_add_mapDomain_succ]
+
+/-- `finSuccEquiv` commutes with Hasse derivatives in the last `n` variables. -/
+theorem finSuccEquiv_hasseDeriv_mapDomain {n : ℕ}
+    (P : MvPolynomial (Fin (n + 1)) R) (i : Fin n →₀ ℕ) :
+    MvPolynomial.finSuccEquiv R n (hasseDeriv (Finsupp.mapDomain Fin.succ i) P) =
+      Finset.sum (MvPolynomial.finSuccEquiv R n P).support fun k =>
+        Polynomial.monomial k (hasseDeriv i ((MvPolynomial.finSuccEquiv R n P).coeff k)) := by
+  classical
+  ext k m
+  rw [coeff_finSuccEquiv_hasseDeriv_mapDomain]
+  conv_rhs => rw [Polynomial.finset_sum_coeff, MvPolynomial.coeff_sum]
+  by_cases hk : k ∈ (MvPolynomial.finSuccEquiv R n P).support
+  · have hcoeff :
+        Finset.sum (MvPolynomial.finSuccEquiv R n P).support
+            (fun b ↦
+              coeff m
+                ((Polynomial.monomial b
+                  (hasseDeriv i ((MvPolynomial.finSuccEquiv R n P).coeff b))).coeff k)) =
+          coeff m (hasseDeriv i ((MvPolynomial.finSuccEquiv R n P).coeff k)) := by
+      rw [Finset.sum_eq_single_of_mem k hk]
+      · simp
+      · intro b _ hb
+        simp [Polynomial.coeff_monomial, hb]
+    exact hcoeff.symm
+  · have hkcoeff : (MvPolynomial.finSuccEquiv R n P).coeff k = 0 := by
+      exact Polynomial.notMem_support_iff.mp hk
+    have hcoeff :
+        Finset.sum (MvPolynomial.finSuccEquiv R n P).support
+            (fun b ↦
+              coeff m
+                ((Polynomial.monomial b
+                  (hasseDeriv i ((MvPolynomial.finSuccEquiv R n P).coeff b))).coeff k)) = 0 := by
+      refine Finset.sum_eq_zero ?_
+      intro b hb
+      have hb' : b ≠ k := fun h => hk (h ▸ hb)
+      simp [Polynomial.coeff_monomial, hb']
+    simpa [hkcoeff] using hcoeff.symm
+
+/-- `finOneAlgEquiv` identifies one-variable Hasse derivatives with the univariate ones. -/
+theorem finOneAlgEquiv_hasseDeriv (P : MvPolynomial (Fin 1) R) (k : ℕ) :
+    finOneAlgEquiv R (hasseDeriv (Finsupp.single 0 k) P) =
+      Polynomial.hasseDeriv k (finOneAlgEquiv R P) := by
+  classical
+  ext n
+  have hsingle :
+      (Finsupp.single (0 : Fin 1) n + Finsupp.single 0 k) = Finsupp.single 0 (n + k) := by
+    apply Finsupp.ext
+    intro i
+    have hi : i = 0 := by simpa using (Fin.eq_zero i)
+    subst hi
+    simp [add_comm]
+  simp [MvPolynomial.coeff_finOneAlgEquiv, hasseDeriv_coeff, hsingle, mvChoose_single,
+    Polynomial.hasseDeriv_coeff, add_comm]
 
 end MvPolynomial
