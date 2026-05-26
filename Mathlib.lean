@@ -877,6 +877,7 @@ public import Mathlib.Algebra.MvPolynomial.Expand
 public import Mathlib.Algebra.MvPolynomial.Funext
 public import Mathlib.Algebra.MvPolynomial.Invertible
 public import Mathlib.Algebra.MvPolynomial.Monad
+public import Mathlib.Algebra.MvPolynomial.MvChoose
 public import Mathlib.Algebra.MvPolynomial.Nilpotent
 public import Mathlib.Algebra.MvPolynomial.NoZeroDivisors
 public import Mathlib.Algebra.MvPolynomial.PDeriv
