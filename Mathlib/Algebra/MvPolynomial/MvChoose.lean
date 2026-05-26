@@ -72,29 +72,13 @@ lemma mvChoose_self (k : σ →₀ ℕ) : mvChoose k k = 1 := by
   simp [mvChoose, Finsupp.prod]
 
 /-- For a single-coordinate multi-index, `mvChoose` is the usual binomial coefficient. -/
+@[simp]
 lemma mvChoose_single (k : σ →₀ ℕ) (i : σ) (j : ℕ) :
     mvChoose k (Finsupp.single i j) = Nat.choose (k i) j := by
   classical
-  by_cases h : Finsupp.single i j ≤ k
-  · have hji : j ≤ k i := Finsupp.single_le_iff.mp h
-    rw [mvChoose_of_le (k := k) (i := Finsupp.single i j) h, Finsupp.prod]
-    have hprod :
-        ∏ x ∈ k.support, Nat.choose (k x) (Finsupp.single i j x) =
-          Nat.choose (k i) (Finsupp.single i j i) := by
-      refine Finset.prod_eq_single (s := k.support)
-        i (fun b _ hb ↦ ?_) ?_
-      · have hb0 : Finsupp.single i j b = 0 := by simp [hb]
-        simp [hb0]
-      · intro hi
-        have hk : k i = 0 := Finsupp.notMem_support_iff.mp hi
-        have hj : j = 0 := Nat.eq_zero_of_le_zero (by simpa [hk] using hji)
-        simp [hk, hj]
-    simpa using hprod
-  · have hji : k i < j := by
-      refine lt_of_not_ge (fun hji ↦ ?_)
-      exact h (Finsupp.single_le_iff.mpr hji)
-    simp [mvChoose_of_not_le (k := k) (i := Finsupp.single i j) h,
-      Nat.choose_eq_zero_of_lt hji]
+  by_cases hj : j = 0
+  · simp [hj, mvChoose]
+  · simp [mvChoose, Finsupp.prod, hj]
 
 /-- The symmetry identity $\binom{i + j}{i} = \binom{i + j}{j}$. -/
 theorem mvChoose_symm_add (i j : σ →₀ ℕ) :
