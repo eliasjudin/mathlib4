@@ -19,7 +19,6 @@ basic identities including the finitely supported Vandermonde identity.
 ## Main declarations
 
 * `Finsupp.choose`
-* `Finsupp.choose_mul`
 * `Finsupp.choose_add`
 
 ## Tags
@@ -33,7 +32,7 @@ namespace Finsupp
 
 open scoped BigOperators
 
-variable {σ τ : Type*}
+variable {σ : Type*}
 
 /-! ### Coordinatewise binomial coefficients -/
 
@@ -74,85 +73,6 @@ lemma choose_single (k : σ →₀ ℕ) (i : σ) (j : ℕ) :
   · simp [hj, choose]
   · simp [choose, Finsupp.prod, hj]
 
-/-- The symmetry identity $\binom{i + j}{i} = \binom{i + j}{j}$. -/
-theorem choose_symm_add (i j : σ →₀ ℕ) :
-    choose (i + j) i = choose (i + j) j := by
-  classical
-  rw [choose_of_le (Finsupp.le_def.2 fun x => Nat.le_add_right _ _),
-    choose_of_le (Finsupp.le_def.2 fun x => Nat.le_add_left _ _)]
-  simp only [Finsupp.prod, Finsupp.add_apply]
-  refine Finset.prod_congr rfl (fun x _hx ↦ ?_)
-  simpa using (Nat.choose_symm_add (a := i x) (b := j x))
-
-/-- The identity $\binom{k}{i} \binom{k - i}{j} = \binom{k}{i + j} \binom{i + j}{i}$. -/
-theorem choose_mul (k i j : σ →₀ ℕ) :
-    choose k i * choose (k - i) j =
-      choose k (i + j) * choose (i + j) i := by
-  classical
-  by_cases hi : i ≤ k
-  · by_cases hj : j ≤ k - i
-    · have hij : i + j ≤ k := by
-        rw [Finsupp.le_def] at hi hj ⊢
-        intro x
-        have hx : i x + j x ≤ i x + (k x - i x) := Nat.add_le_add_left (hj x) _
-        simpa [Finsupp.add_apply, Finsupp.tsub_apply, Nat.add_sub_of_le (hi x)] using hx
-      rw [choose_of_le hi, choose_of_le hj, choose_of_le hij,
-        choose_of_le (Finsupp.le_def.2 fun x => Nat.le_add_right _ _)]
-      have hprod_ki :
-          (k - i).prod (fun x n ↦ n.choose (j x)) =
-            ∏ x ∈ k.support, (k x - i x).choose (j x) := by
-        have h :=
-          Finset.prod_subset (Finsupp.support_tsub (f1 := k) (f2 := i))
-            (f := fun x ↦ (k x - i x).choose (j x)) ?_
-        · simpa [Finsupp.prod, Finsupp.tsub_apply] using h
-        · intro x _hxk hxki
-          have hx0 : (k - i) x = 0 := Finsupp.notMem_support_iff.mp hxki
-          have hx0' : k x - i x = 0 := by simpa [Finsupp.tsub_apply] using hx0
-          have hjx : j x = 0 := by
-            have : j x ≤ (k - i) x := (Finsupp.le_def.mp hj) x
-            exact Nat.eq_zero_of_le_zero (by simpa [hx0] using this)
-          simp [hx0', hjx]
-      have hprod_ij :
-          (i + j).prod (fun x n ↦ n.choose (i x)) =
-            ∏ x ∈ k.support, (i x + j x).choose (i x) := by
-        have hsupp : (i + j).support ⊆ k.support := by
-          intro x hxij
-          have hx_ne0 : (i + j) x ≠ 0 := Finsupp.mem_support_iff.mp hxij
-          have hx_pos : 0 < (i + j) x := Nat.pos_of_ne_zero hx_ne0
-          have hx_le : (i + j) x ≤ k x := (Finsupp.le_def.mp hij) x
-          exact Finsupp.mem_support_iff.mpr (Nat.ne_of_gt (lt_of_lt_of_le hx_pos hx_le))
-        have h :=
-          Finset.prod_subset hsupp (f := fun x ↦ (i x + j x).choose (i x)) ?_
-        · simpa [Finsupp.prod, Finsupp.add_apply] using h
-        · intro x _hxk hxij
-          have hx0 : (i + j) x = 0 := Finsupp.notMem_support_iff.mp hxij
-          obtain ⟨hix, hjx⟩ := Nat.add_eq_zero_iff.mp (by simpa [Finsupp.add_apply] using hx0)
-          simp [hix, hjx]
-      rw [hprod_ki, hprod_ij]
-      simp only [Finsupp.prod, Finsupp.add_apply]
-      rw [(Finset.prod_mul_distrib (s := k.support)
-            (f := fun x ↦ (k x).choose (i x))
-            (g := fun x ↦ (k x - i x).choose (j x))).symm]
-      rw [(Finset.prod_mul_distrib (s := k.support)
-            (f := fun x ↦ (k x).choose (i x + j x))
-            (g := fun x ↦ (i x + j x).choose (i x))).symm]
-      refine Finset.prod_congr rfl (fun x hx ↦ ?_)
-      simpa [Nat.add_sub_cancel_left] using
-        (Nat.choose_mul (n := k x) (k := i x + j x) (s := i x) (Nat.le_add_right _ _)).symm
-    · have hij : ¬ i + j ≤ k := by
-        intro hij
-        apply hj
-        rw [Finsupp.le_def] at hij ⊢
-        intro x
-        have hijx : i x + j x ≤ k x := by simpa [Finsupp.add_apply] using hij x
-        have : j x + i x ≤ k x := by simpa [Nat.add_comm] using hijx
-        have : j x ≤ k x - i x := Nat.le_sub_of_add_le this
-        simpa [Finsupp.tsub_apply] using this
-      simp [choose_of_not_le hj, choose_of_not_le hij]
-  · have hij : ¬ i + j ≤ k := fun hij =>
-      hi ((Finsupp.le_def.2 fun x => Nat.le_add_right _ _).trans hij)
-    simp [choose_of_not_le hi, choose_of_not_le hij]
-
 /-- Over a finite index type, $\binom{k}{i} = \prod_{j : \sigma} \binom{k_j}{i_j}$. -/
 lemma choose_eq_prod_choose [Fintype σ] (k i : σ →₀ ℕ) :
     choose k i = ∏ j : σ, (k j).choose (i j) := by
@@ -180,25 +100,6 @@ lemma choose_eq_prod_choose [Fintype σ] (k i : σ →₀ ℕ) :
     have hprod : (∏ y : σ, Nat.choose (k y) (i y)) = 0 := by
       simpa using (Finset.prod_eq_zero (i := x) (by simp) hx0)
     simp [hprod]
-
-lemma choose_mapDomain_equiv (e : σ ≃ τ) (k i : σ →₀ ℕ) :
-    choose (k.mapDomain e) (i.mapDomain e) = choose k i := by
-  by_cases h : i ≤ k
-  · have hmap : i.mapDomain e ≤ k.mapDomain e := by
-      rw [Finsupp.le_def] at h ⊢
-      intro a
-      simpa [Finsupp.mapDomain_equiv_apply] using h (e.symm a)
-    rw [choose_of_le hmap, choose_of_le h]
-    simpa [Finsupp.mapDomain_equiv_apply] using
-      (Finsupp.prod_mapDomain_index_inj
-        (f := e) (s := k) (h := fun a n ↦ n.choose ((i.mapDomain e) a)) e.injective)
-  · have hmap : ¬ i.mapDomain e ≤ k.mapDomain e := by
-      intro hmap
-      apply h
-      rw [Finsupp.le_def] at hmap ⊢
-      intro a
-      simpa [Finsupp.mapDomain_equiv_apply] using hmap (e a)
-    simp [choose_of_not_le h, choose_of_not_le hmap]
 
 private lemma choose_eq_prod_choose_of_support_subset
     (k i : σ →₀ ℕ) (s : Finset σ) (hi : i.support ⊆ s) :
