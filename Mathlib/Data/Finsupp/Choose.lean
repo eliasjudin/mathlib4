@@ -7,7 +7,8 @@ module
 
 public import Mathlib.Data.Finsupp.Antidiagonal
 public import Mathlib.Data.Finsupp.Order
-public import Mathlib.Data.Nat.Choose.Vandermonde
+
+import Mathlib.Data.Nat.Choose.Vandermonde
 
 /-!
 # Coordinatewise binomial coefficients
