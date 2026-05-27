@@ -5,99 +5,89 @@ Authors: Elias Judin
 -/
 module
 
-public import Mathlib.Algebra.MvPolynomial.Basic
+public import Mathlib.Data.Finsupp.Antidiagonal
+public import Mathlib.Data.Finsupp.Order
 public import Mathlib.Data.Nat.Choose.Vandermonde
 
 /-!
-# Multivariate binomial coefficients
+# Coordinatewise binomial coefficients
 
-This file defines `MvPolynomial.mvChoose`, the multivariate binomial coefficient
+This file defines `Finsupp.choose`, the coordinatewise binomial coefficient
 $\binom{k}{i}=\prod_j \binom{k_j}{i_j}$ for finitely supported `k, i : σ →₀ ℕ`, and proves
-identities used for Hasse derivatives and related algebra.
+basic identities including the finitely supported Vandermonde identity.
 
 ## Main declarations
 
-* `MvPolynomial.mvChoose`
-* `MvPolynomial.mvChoose_mul`
-* `MvPolynomial.mvChoose_add`
-
-## Naming
-
-`mvChoose` is namespaced under `MvPolynomial`. The `mv` prefix marks multivariate-polynomial-local
-notions. It is the coordinatewise product $\prod_j \binom{k_j}{i_j}$, hence distinct from
-`Nat.multinomial` (multinomial coefficients in the usual multinomial-theorem sense).
+* `Finsupp.choose`
+* `Finsupp.choose_mul`
+* `Finsupp.choose_add`
 
 ## Tags
 
-multivariate polynomial, binomial coefficient
+finitely supported function, binomial coefficient
 -/
 
 @[expose] public section
 
-namespace MvPolynomial
+namespace Finsupp
 
-open Finsupp
 open scoped BigOperators
 
-variable {σ τ R : Type*} [CommSemiring R]
+variable {σ τ : Type*}
 
-/-! ### Multivariate binomial coefficients -/
+/-! ### Coordinatewise binomial coefficients -/
 
-/-- The multivariate binomial coefficient $\binom{k}{i}$. -/
-def mvChoose (k i : σ →₀ ℕ) : ℕ :=
+/-- The coordinatewise binomial coefficient $\binom{k}{i}$. -/
+def choose (k i : σ →₀ ℕ) : ℕ :=
   i.prod (fun j m ↦ (k j).choose m)
 
-lemma mvChoose_of_le {k i : σ →₀ ℕ} (h : i ≤ k) :
-    mvChoose k i = k.prod (fun j n ↦ n.choose (i j)) := by
+lemma choose_of_le {k i : σ →₀ ℕ} (h : i ≤ k) :
+    choose k i = k.prod (fun j n ↦ n.choose (i j)) := by
   classical
-  simp only [mvChoose, Finsupp.prod]
+  simp only [choose, Finsupp.prod]
   refine Finset.prod_subset (Finsupp.support_mono h) fun j _ hj ↦ ?_
   rw [Finsupp.notMem_support_iff.mp hj, Nat.choose_zero_right]
 
-lemma mvChoose_of_not_le {k i : σ →₀ ℕ} (h : ¬ i ≤ k) : mvChoose k i = 0 := by
+lemma choose_of_not_le {k i : σ →₀ ℕ} (h : ¬ i ≤ k) : choose k i = 0 := by
   classical
   simp only [Finsupp.le_def, not_forall] at h
   obtain ⟨x, hx⟩ := h
-  simp only [mvChoose, Finsupp.prod]
+  simp only [choose, Finsupp.prod]
   have hxlt : k x < i x := lt_of_not_ge hx
   refine Finset.prod_eq_zero (i := x) ?_ (Nat.choose_eq_zero_of_lt hxlt)
   · exact Finsupp.mem_support_iff.mpr (Nat.ne_of_gt (lt_of_le_of_lt (Nat.zero_le _) hxlt))
 
 @[simp]
-lemma mvChoose_zero (k : σ →₀ ℕ) : mvChoose k 0 = 1 := by
-  simp [mvChoose]
+lemma choose_zero (k : σ →₀ ℕ) : choose k 0 = 1 := by
+  simp [choose]
 
 @[simp]
-lemma mvChoose_self (k : σ →₀ ℕ) : mvChoose k k = 1 := by
-  simp [mvChoose, Finsupp.prod]
+lemma choose_self (k : σ →₀ ℕ) : choose k k = 1 := by
+  simp [choose, Finsupp.prod]
 
-/-- For a single-coordinate multi-index, `mvChoose` is the usual binomial coefficient. -/
+/-- For a single-coordinate multi-index, `choose` is the usual binomial coefficient. -/
 @[simp]
-lemma mvChoose_single (k : σ →₀ ℕ) (i : σ) (j : ℕ) :
-    mvChoose k (Finsupp.single i j) = Nat.choose (k i) j := by
+lemma choose_single (k : σ →₀ ℕ) (i : σ) (j : ℕ) :
+    choose k (Finsupp.single i j) = Nat.choose (k i) j := by
   classical
   by_cases hj : j = 0
-  · simp [hj, mvChoose]
-  · simp [mvChoose, Finsupp.prod, hj]
+  · simp [hj, choose]
+  · simp [choose, Finsupp.prod, hj]
 
 /-- The symmetry identity $\binom{i + j}{i} = \binom{i + j}{j}$. -/
-theorem mvChoose_symm_add (i j : σ →₀ ℕ) :
-    mvChoose (i + j) i = mvChoose (i + j) j := by
+theorem choose_symm_add (i j : σ →₀ ℕ) :
+    choose (i + j) i = choose (i + j) j := by
   classical
-  rw [mvChoose_of_le (Finsupp.le_def.2 fun x => Nat.le_add_right _ _),
-    mvChoose_of_le (Finsupp.le_def.2 fun x => Nat.le_add_left _ _)]
+  rw [choose_of_le (Finsupp.le_def.2 fun x => Nat.le_add_right _ _),
+    choose_of_le (Finsupp.le_def.2 fun x => Nat.le_add_left _ _)]
   simp only [Finsupp.prod, Finsupp.add_apply]
   refine Finset.prod_congr rfl (fun x _hx ↦ ?_)
   simpa using (Nat.choose_symm_add (a := i x) (b := j x))
 
-lemma mvChoose_symm_add_cast (i j : σ →₀ ℕ) :
-    (mvChoose (i + j) i : R) = (mvChoose (i + j) j : R) :=
-  congrArg (fun n : ℕ => (n : R)) (mvChoose_symm_add (σ := σ) i j)
-
 /-- The identity $\binom{k}{i} \binom{k - i}{j} = \binom{k}{i + j} \binom{i + j}{i}$. -/
-theorem mvChoose_mul (k i j : σ →₀ ℕ) :
-    mvChoose k i * mvChoose (k - i) j =
-      mvChoose k (i + j) * mvChoose (i + j) i := by
+theorem choose_mul (k i j : σ →₀ ℕ) :
+    choose k i * choose (k - i) j =
+      choose k (i + j) * choose (i + j) i := by
   classical
   by_cases hi : i ≤ k
   · by_cases hj : j ≤ k - i
@@ -106,8 +96,8 @@ theorem mvChoose_mul (k i j : σ →₀ ℕ) :
         intro x
         have hx : i x + j x ≤ i x + (k x - i x) := Nat.add_le_add_left (hj x) _
         simpa [Finsupp.add_apply, Finsupp.tsub_apply, Nat.add_sub_of_le (hi x)] using hx
-      rw [mvChoose_of_le hi, mvChoose_of_le hj, mvChoose_of_le hij,
-        mvChoose_of_le (Finsupp.le_def.2 fun x => Nat.le_add_right _ _)]
+      rw [choose_of_le hi, choose_of_le hj, choose_of_le hij,
+        choose_of_le (Finsupp.le_def.2 fun x => Nat.le_add_right _ _)]
       have hprod_ki :
           (k - i).prod (fun x n ↦ n.choose (j x)) =
             ∏ x ∈ k.support, (k x - i x).choose (j x) := by
@@ -158,17 +148,17 @@ theorem mvChoose_mul (k i j : σ →₀ ℕ) :
         have : j x + i x ≤ k x := by simpa [Nat.add_comm] using hijx
         have : j x ≤ k x - i x := Nat.le_sub_of_add_le this
         simpa [Finsupp.tsub_apply] using this
-      simp [mvChoose_of_not_le hj, mvChoose_of_not_le hij]
+      simp [choose_of_not_le hj, choose_of_not_le hij]
   · have hij : ¬ i + j ≤ k := fun hij =>
       hi ((Finsupp.le_def.2 fun x => Nat.le_add_right _ _).trans hij)
-    simp [mvChoose_of_not_le hi, mvChoose_of_not_le hij]
+    simp [choose_of_not_le hi, choose_of_not_le hij]
 
 /-- Over a finite index type, $\binom{k}{i} = \prod_{j : \sigma} \binom{k_j}{i_j}$. -/
-lemma mvChoose_eq_prod_choose [Fintype σ] (k i : σ →₀ ℕ) :
-    mvChoose k i = ∏ j : σ, (k j).choose (i j) := by
+lemma choose_eq_prod_choose [Fintype σ] (k i : σ →₀ ℕ) :
+    choose k i = ∏ j : σ, (k j).choose (i j) := by
   classical
   by_cases hle : i ≤ k
-  · rw [mvChoose_of_le (k := k) (i := i) hle]
+  · rw [choose_of_le (k := k) (i := i) hle]
     have houtside :
         ∀ x ∈ (Finset.univ : Finset σ), x ∉ k.support → Nat.choose (k x) (i x) = 1 := by
       intro x _hx hxnot
@@ -181,7 +171,7 @@ lemma mvChoose_eq_prod_choose [Fintype σ] (k i : σ →₀ ℕ) :
       (Finset.prod_subset (Finset.subset_univ _) houtside :
         ∏ x ∈ k.support, Nat.choose (k x) (i x) =
           ∏ x ∈ (Finset.univ : Finset σ), Nat.choose (k x) (i x))
-  · rw [mvChoose_of_not_le (k := k) (i := i) hle]
+  · rw [choose_of_not_le (k := k) (i := i) hle]
     have hnot : ¬ ∀ x, i x ≤ k x := by
       simpa [Finsupp.le_def] using hle
     rcases not_forall.mp hnot with ⟨x, hx⟩
@@ -191,14 +181,14 @@ lemma mvChoose_eq_prod_choose [Fintype σ] (k i : σ →₀ ℕ) :
       simpa using (Finset.prod_eq_zero (i := x) (by simp) hx0)
     simp [hprod]
 
-lemma mvChoose_mapDomain_equiv (e : σ ≃ τ) (k i : σ →₀ ℕ) :
-    mvChoose (k.mapDomain e) (i.mapDomain e) = mvChoose k i := by
+lemma choose_mapDomain_equiv (e : σ ≃ τ) (k i : σ →₀ ℕ) :
+    choose (k.mapDomain e) (i.mapDomain e) = choose k i := by
   by_cases h : i ≤ k
   · have hmap : i.mapDomain e ≤ k.mapDomain e := by
       rw [Finsupp.le_def] at h ⊢
       intro a
       simpa [Finsupp.mapDomain_equiv_apply] using h (e.symm a)
-    rw [mvChoose_of_le hmap, mvChoose_of_le h]
+    rw [choose_of_le hmap, choose_of_le h]
     simpa [Finsupp.mapDomain_equiv_apply] using
       (Finsupp.prod_mapDomain_index_inj
         (f := e) (s := k) (h := fun a n ↦ n.choose ((i.mapDomain e) a)) e.injective)
@@ -208,14 +198,14 @@ lemma mvChoose_mapDomain_equiv (e : σ ≃ τ) (k i : σ →₀ ℕ) :
       rw [Finsupp.le_def] at hmap ⊢
       intro a
       simpa [Finsupp.mapDomain_equiv_apply] using hmap (e a)
-    simp [mvChoose_of_not_le h, mvChoose_of_not_le hmap]
+    simp [choose_of_not_le h, choose_of_not_le hmap]
 
-private lemma mvChoose_eq_prod_choose_of_support_subset
+private lemma choose_eq_prod_choose_of_support_subset
     (k i : σ →₀ ℕ) (s : Finset σ) (hi : i.support ⊆ s) :
-    mvChoose k i = ∏ a : s, (k a).choose (i a) := by
+    choose k i = ∏ a : s, (k a).choose (i a) := by
   classical
   by_cases hki : i ≤ k
-  · rw [mvChoose_of_le hki]
+  · rw [choose_of_le hki]
     have hsupp : i.support ⊆ k.support := by
       intro a ha
       refine Finsupp.mem_support_iff.mpr fun hk0 ↦ ?_
@@ -250,7 +240,7 @@ private lemma mvChoose_eq_prod_choose_of_support_subset
             simpa using (Finset.prod_attach s (fun a ↦ (k a).choose (i a))).symm
           _ = ∏ a : s, (k a).choose (i a) := by
             rw [Finset.univ_eq_attach]
-  · rw [mvChoose_of_not_le (k := k) (i := i) hki]
+  · rw [choose_of_not_le (k := k) (i := i) hki]
     have hnot : ¬ ∀ a, i a ≤ k a := by
       simpa [Finsupp.le_def] using hki
     rcases not_forall.mp hnot with ⟨a, ha⟩
@@ -261,8 +251,8 @@ private lemma mvChoose_eq_prod_choose_of_support_subset
     refine (Finset.prod_eq_zero (i := ⟨a, has⟩) (by simp) ?_).symm
     simpa using Nat.choose_eq_zero_of_lt hlt
 
-theorem mvChoose_add (a b i : σ →₀ ℕ) [DecidableEq σ] :
-    mvChoose (a + b) i = ∑ p ∈ Finset.antidiagonal i, mvChoose a p.1 * mvChoose b p.2 := by
+theorem choose_add (a b i : σ →₀ ℕ) [DecidableEq σ] :
+    choose (a + b) i = ∑ p ∈ Finset.antidiagonal i, choose a p.1 * choose b p.2 := by
   classical
   let τ := {x // x ∈ i.support}
   let ψ : (∀ x : τ, ℕ × ℕ) → (σ →₀ ℕ) × (σ →₀ ℕ) := fun f ↦
@@ -284,7 +274,7 @@ theorem mvChoose_add (a b i : σ →₀ ℕ) [DecidableEq σ] :
   have hψ_val :
       ∀ f, f ∈ Fintype.piFinset (fun x : τ ↦ Finset.antidiagonal (i x)) →
         (∏ x : τ, (a x).choose (f x).1 * (b x).choose (f x).2) =
-          mvChoose a (ψ f).1 * mvChoose b (ψ f).2 := by
+          choose a (ψ f).1 * choose b (ψ f).2 := by
     intro f hf
     have hsubset₁ :
         (ψ f).1.support ⊆ i.support := by
@@ -296,8 +286,8 @@ theorem mvChoose_add (a b i : σ →₀ ℕ) [DecidableEq σ] :
       intro x hx
       exact (Finsupp.support_extendDomain_subset
         (f := Finsupp.equivFunOnFinite.symm fun y : τ ↦ (f y).2)) hx
-    have hprod₁ : (∏ x : τ, (a x).choose (f x).1) = mvChoose a (ψ f).1 := by
-      rw [mvChoose_eq_prod_choose_of_support_subset (s := i.support) (hi := hsubset₁)]
+    have hprod₁ : (∏ x : τ, (a x).choose (f x).1) = choose a (ψ f).1 := by
+      rw [choose_eq_prod_choose_of_support_subset (s := i.support) (hi := hsubset₁)]
       symm
       refine Fintype.prod_congr _ _ fun x ↦ ?_
       have hcoe :
@@ -309,8 +299,8 @@ theorem mvChoose_add (a b i : σ →₀ ℕ) [DecidableEq σ] :
             (.subtype fun a : σ ↦ a ∈ i.support)
             (Finsupp.equivFunOnFinite.symm fun y : τ ↦ (f y).1) x)
       exact congrArg (fun n ↦ (a x).choose n) hcoe
-    have hprod₂ : (∏ x : τ, (b x).choose (f x).2) = mvChoose b (ψ f).2 := by
-      rw [mvChoose_eq_prod_choose_of_support_subset (s := i.support) (hi := hsubset₂)]
+    have hprod₂ : (∏ x : τ, (b x).choose (f x).2) = choose b (ψ f).2 := by
+      rw [choose_eq_prod_choose_of_support_subset (s := i.support) (hi := hsubset₂)]
       symm
       refine Fintype.prod_congr _ _ fun x ↦ ?_
       have hcoe :
@@ -329,7 +319,7 @@ theorem mvChoose_add (a b i : σ →₀ ℕ) [DecidableEq σ] :
               (Finset.prod_mul_distrib (s := (Finset.univ : Finset τ))
                 (f := fun x : τ ↦ (a x).choose (f x).1)
                 (g := fun x : τ ↦ (b x).choose (f x).2))
-      _ = mvChoose a (ψ f).1 * mvChoose b (ψ f).2 := by rw [hprod₁, hprod₂]
+      _ = choose a (ψ f).1 * choose b (ψ f).2 := by rw [hprod₁, hprod₂]
   have hψ_inj :
       ∀ f g,
         f ∈ Fintype.piFinset (fun x : τ ↦ Finset.antidiagonal (i x)) →
@@ -377,8 +367,8 @@ theorem mvChoose_add (a b i : σ →₀ ℕ) [DecidableEq σ] :
         have hp20 : p.2 a = 0 := (Nat.add_eq_zero_iff.mp hp0).2
         simp [ψ, f, Finsupp.extendDomain_apply, ha, hp20]
   calc
-    mvChoose (a + b) i = ∏ x : τ, ((a + b) x).choose (i x) := by
-      exact mvChoose_eq_prod_choose_of_support_subset (k := a + b) (i := i)
+    choose (a + b) i = ∏ x : τ, ((a + b) x).choose (i x) := by
+      exact choose_eq_prod_choose_of_support_subset (k := a + b) (i := i)
         (s := i.support) (hi := fun x hx ↦ hx)
     _ = ∏ x : τ, ∑ p ∈ Finset.antidiagonal (i x), (a x).choose p.1 * (b x).choose p.2 := by
       refine Finset.prod_congr rfl fun x _ ↦ ?_
@@ -389,7 +379,7 @@ theorem mvChoose_add (a b i : σ →₀ ℕ) [DecidableEq σ] :
         (Finset.prod_univ_sum
           (t := fun x : τ ↦ Finset.antidiagonal (i x))
           (f := fun x p ↦ (a x).choose p.1 * (b x).choose p.2))
-    _ = ∑ p ∈ Finset.antidiagonal i, mvChoose a p.1 * mvChoose b p.2 := by
+    _ = ∑ p ∈ Finset.antidiagonal i, choose a p.1 * choose b p.2 := by
       refine Finset.sum_bij (fun f _ ↦ ψ f) hψ_mem
         (fun f hf g hg hfg ↦ hψ_inj f g hf hg hfg)
         (fun p hp ↦ by
@@ -397,4 +387,4 @@ theorem mvChoose_add (a b i : σ →₀ ℕ) [DecidableEq σ] :
           exact ⟨f, hf, hfp⟩)
         hψ_val
 
-end MvPolynomial
+end Finsupp
